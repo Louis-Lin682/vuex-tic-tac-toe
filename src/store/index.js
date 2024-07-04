@@ -12,14 +12,16 @@ const calculateWinner = (squares) => {
     [2, 4, 6]
   ];
 
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i];
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
+  for (const [a, b, c] of lines) {
+    const value = squares[a];
+    // 先確保value不為空,然後確認是否為連線組合排列
+    if (value && value === squares[b] && value === squares[c]) {
+      return { winner: value, isGameOver: true };
     }
   }
-
-  return null;
+  // 如果都沒有連線,就等於沒有贏家,平局遊戲結束
+  const isDraw = squares.every(square => square !== '');
+  return { winner: null, isGameOver: isDraw };
 };
 
 export default createStore({
@@ -31,6 +33,14 @@ export default createStore({
       ['', '', ''],
     ],
     winner: null,
+    innings: 1,
+    score: {
+      X: 0,
+      O: 0
+    },
+    gameWon: null,
+    gameStarted: false,
+    isGameOver: false,
   },
   getters: {
   },
@@ -38,30 +48,63 @@ export default createStore({
   mutations: {
     // 定義 mutation 來更新 board 和 player
     makeMove(state, { x, y }) {
-      if (state.winner) return;
+      // 遊戲開始
+      state.gameStarted = true;
+      if (state.isGameOver) return;
       if (state.board[x][y] !== '') return;
-      
-      // 更新 board
+
       state.board[x][y] = state.player;
-      
-      // 切換玩家
-      state.player = state.player === 'X' ? 'O' : 'X';
-      
-      // 檢查是否有勝利者
-      state.winner = calculateWinner(state.board.flat());
-      console.log(state.winner)
+
+      const result = calculateWinner(state.board.flat());
+      state.winner = result.winner;
+      state.isGameOver = result.isGameOver;
+
+      if (state.isGameOver) {
+        if (state.winner) {
+          state.score[state.winner] += 1;
+        }
+
+        if (state.score.X === 2) {
+          state.gameWon = 'X';
+        } else if (state.score.O === 2) {
+          state.gameWon = 'O';
+        }
+      } else {
+        state.player = state.player === 'X' ? 'O' : 'X';
+      }
     },
     
-    // 定義 mutation 來重置遊戲
+    // 重置遊戲
     resetGame(state) {
       state.board = [
         ['', '', ''],
         ['', '', ''],
         ['', '', ''],
       ];
+      state.score= {
+        X: 0,
+        O: 0
+      },
+      // 狀態重置
       state.player = 'X';
       state.winner = null;
-    }
+      state.innings = 1;
+      state.gameWon= null;
+      state.isGameOver = false;
+      state.gameStarted= false;
+    },
+    // 下一局
+    nextRound(state) {
+      if (state.gameWon) return;
+      state.board = [
+        ['', '', ''],
+        ['', '', ''],
+        ['', '', ''],
+      ];
+      state.winner = null;
+      state.isGameOver = false;
+      state.innings += 1;
+    },
   },
   actions: {
   },
